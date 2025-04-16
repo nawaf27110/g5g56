@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>التحقق من الطلب</title>
+  <style>
+    body {
+      font-family: Tahoma, sans-serif;
+      background-color: #f0f0f0;
+      text-align: center;
+      padding: 50px;
+      margin: 0;
+    }
+    .container {
+      background-color: white;
+      padding: 30px;
+      max-width: 400px;
+      margin: auto;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .code-box {
+      margin-top: 20px;
+      font-size: 18px;
+      color: green;
+      word-wrap: break-word; /* لاجتناب مشاكل النص الطويل */
+    }
+    .red-note {
+      color: red;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h2>أدخل رقم الطلب والبريد</h2>
+
+    <div id="form">
+      <input type="text" id="orderId" placeholder="رقم الطلب" />
+      <input type="email" id="email" placeholder="البريد الإلكتروني" />
+      <button onclick="checkCode()">تحقق</button>
+
+      <!-- زر زيارة المتجر للشراء (سيحاول فتحه عبر كروم أولاً) -->
+      <button onclick="goToStore()">
+        زيارة المتجر للشراء
+      </button>
+
+      <!-- النص المطلوب باللون الأحمر تحت زر زيارة المتجر -->
+      <div class="red-note">
+        رقم الطلب والايميل والروابط الخاصة المرتبطة ببنك الاسئلة مسؤليتك الشخصية. 
+        <br>أي إساءة استخدام سيتم تعطيل عضويتك فورًا.
+      </div>
+    </div>
+
+    <div id="result" class="code-box"></div>
+  </div>
+
+  <script>
+    // دالة Netlify لجلب بيانات الطلبات من الشيت
+    // (يمكنك تعديل الرابط إن لزم)
+    const sheetURL = "/.netlify/functions/sheetdata";
+
+    // حفظ وإعادة تعبئة الحقول من LocalStorage:
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedOrderId = localStorage.getItem('savedOrderId');
+      const savedEmail = localStorage.getItem('savedEmail');
+      if (savedOrderId) {
+        document.getElementById('orderId').value = savedOrderId;
+      }
+      if (savedEmail) {
+        document.getElementById('email').value = savedEmail;
+      }
+    });
+
+    async function checkCode(orderIdParam = '', emailParam = '') {
+      const orderId = orderIdParam || document.getElementById('orderId').value.trim();
+      const email = emailParam || document.getElementById('email').value.trim().toLowerCase();
+      const resultBox = document.getElementById('result');
+
+      if (!orderId || !email) {
+        resultBox.textContent = 'الرجاء تعبئة البيانات أولاً';
+        return;
+      }
+
+      // نحفظ آخر مدخلات في LocalStorage
+      localStorage.setItem('savedOrderId', orderId);
+      localStorage.setItem('savedEmail', email);
+
+      resultBox.textContent = 'جاري التحقق...';
+
+      try {
+        // جلب بيانات الطلبات من الدالة
+        const response = await fetch(sheetURL);
+        if (!response.ok) {
+          throw new Error("فشل في الاتصال بالدالة");
+        }
+
+        const data = await response.json();
+        // ابحث عن سجل يطابق order_id والبريد
+        const match = data.find(entry =>
+          entry.order_id?.trim() === orderId &&
+          entry.email?.trim().toLowerCase() === email
+        );
+
+        if (match) {
+          // نجاح - نعرض الكود + رابط بنك الأسئلة
+          alert("✅ تم العثور على الطلب، سيتم عرض الكود الآن");
+
+          // إخفاء النموذج
+          document.getElementById('form').style.display = 'none';
+
+          // عرض النتيجة
+          // إخفاء النموذج
+          document.getElementById('form').style.display = 'none';
+
+          // توجيه تلقائي إلى الصفحة المحمية
+          window.location.href = `/.netlify/functions/protectedPage?code=${encodeURIComponent(match.code)}&email=${encodeURIComponent(match.email)}`;
+        } else {
+          alert("❌ الطلب غير موجود أو البيانات غير صحيحة");
+          resultBox.textContent = '❌ لم يتم العثور على الطلب. تأكد من البيانات.';
+        }
+      } catch (err) {
+        alert("❌ حدث خطأ أثناء الاتصال أو أثناء جلب البيانات");
+        resultBox.textContent = 'حدث خطأ أثناء التحقق.';
+        console.error(err);
+      }
+    }
+
+    function goToStore() {
+      // رابط المنتج في متجرك
+      const storeUrl = "https://myexams.myshopify.com/products/باقة-مادة-واحدة-15ريال";
+      // محاولة فتحه عبر مخطط كروم
+      const chromeSchemeUrl = "googlechrome://myexams.myshopify.com/products/باقة-مادة-واحدة-15ريال";
+
+      // سيحاول فتحه عبر مخطط كروم
+      window.location.href = chromeSchemeUrl;
+      // بعد ثانيتين، لو لم يفتح، سيتحوّل إلى الرابط العادي
+      setTimeout(() => {
+        window.location.href = storeUrl;
+      }, 2000);
+    }
+
+    // إذا كان هناك قيم بالـ Query Parameters - يتم تعبئتها تلقائيًا
+    const params = new URLSearchParams(window.location.search);
+    const autoOrderId = params.get('order_id');
+    const autoEmail = params.get('email');
+    if (autoOrderId && autoEmail) {
+      document.getElementById('orderId').value = autoOrderId;
+      document.getElementById('email').value = autoEmail;
+      checkCode(autoOrderId, autoEmail);
+    }
+  </script>
+</body>
+</html>

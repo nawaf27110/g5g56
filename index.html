@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>أختبار مادة فيزياء 3-3</title>
+
+  <!-- ربط ملف CSS (اختياري) -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- مكتبة MathJax لعرض المعادلات -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [["$","$"], ["\\(","\\)"]],
+        displayMath: [["$$","$$"], ["\\[","\\]"]]
+      }
+    };
+<script>
+  // بمجرد اكتمال تحميل الصفحة:
+  window.addEventListener("DOMContentLoaded", () => {
+    // احذف بارامترات الاستعلام من الرابط
+    const newUrl = window.location.origin + window.location.pathname;
+    window.history.replaceState({}, '', newUrl);
+  });
+</script>
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+  <!-- مكتبة html2pdf إن احتجتها لاحقًا (حاليًا غير مستخدمة) -->
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+ <!-- تحقق من الكود والإيميل عبر استعلام الشيت (sheetdata) -->
+  <script>
+    // اجلب الكود والإيميل من رابط الصفحة
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const email = params.get("email");
+
+    if(!code || !email) {
+      // إذا لم يتوفر code أو email، إعادة توجيه لـ check.html
+      alert("🚫 لا يمكنك الدخول بدون كود وبريد إلكتروني");
+      window.location.href = "check.html";
+    } else {
+      console.log("كود الدخول =", code);
+      console.log("الإيميل =", email);
+
+      // نتحقق من الشيت عبر دالة sheetdata الموجودة لديك على نتلايفي
+      fetch('/.netlify/functions/sheetdata')
+        .then(response => response.json())
+        .then(data => {
+          // ابحث عن صف فيه code و email يطابقان ما جاء في الرابط
+          const match = data.find(row =>
+            row.code?.trim() === code.trim() &&
+            row.email?.trim().toLowerCase() === email.trim().toLowerCase()
+          );
+
+          if (!match) {
+            // لم يتم العثور على مطابق
+            alert("🚫 البيانات غير صحيحة، سيتم إعادتك إلى صفحة التحقق.");
+            window.location.href = "check.html";
+          } else {
+            // الدخول مسموح
+            console.log("✔ الدخول مسموح");
+            // بإمكانك إضافة أي إجراء أو تشغيل وظائف أخرى
+            // مثل إظهار الصفحة أو إزالة الغطاء عنها
+          }
+        })
+        .catch(error => {
+          console.error("حدث خطأ أثناء جلب أو قراءة البيانات:", error);
+          alert("🚫 حدث خطأ، حاول لاحقًا.");
+          window.location.href = "check.html";
+        });
+    }
+  </script>
+
+  <!-- 1) بنك الأسئلة -->
+  <script src="questionsDatabase.js"></script>
+
+  <!-- 2) كود المنطق بعده -->
+  <script src="script.js"></script>
+</head>
+
+<body>
+
+  <!-- الصفحة الأولى (بيانات أساسية) -->
+  <div id="page1" class="container">
+    <h3>البيانات الأساسية (جميعها حقول إلزامية)</h3>
+    
+    <!-- اسم المعلم -->
+    <label>اسم المعلم:</label>
+    <input type="text" id="teacherName" required placeholder="مثال: أ. نواف الطويلعي" oninput="saveFormState()">
+
+    <!-- العام الدراسي -->
+    <label>العام الدراسي:</label>
+    <input type="text" id="academicYear" required placeholder="مثال: 1444" oninput="updateAcademicYear(); saveFormState();">
+
+    <!-- إدارة التعليم -->
+    <label>إدارة التعليم :</label>
+    <input type="text" id="educationDepartment" required placeholder="مثال: جدة" oninput="updateEducationDepartment(); saveFormState();">
+
+    <!-- نوع الاختبار -->
+    <label>نوع الاختبار :</label>
+    <select id="examType" required onchange="updateExamType(); saveFormState();">
+      <option value="">اختر نوع الاختبار</option>
+      <option value="اختبار الفترة الاولى">اختبار الفترة الاولى</option>
+      <option value="اختبار نهائي">اختبار نهائي</option>
+      <option value="أختبار قصير">أختبار قصير</option>
+      <option value="واجب">واجب</option>
+    </select>
+
+    <!-- الدرجة الكلية -->
+    <label>الدرجة الكلية :</label>
+    <input type="number" id="manualTotalScore" required min="0" value="0" oninput="updateManualTotalScore(); saveFormState();">
+
+    <!-- اسم المدرسة -->
+    <label>اسم المدرسة :</label>
+    <input type="text" id="schoolName" required placeholder="مثال: ثانوية الملك فهد" oninput="saveFormState()">
+
+    <!-- القائمة المنسدلة لاختيار بنين/بنات -->
+    <label for="genderSelect">اختر النوع:</label>
+    <select id="genderSelect" onchange="toggleGenderMode()">
+      <option value="boys" selected>بنين</option>
+      <option value="girls">بنات</option>
+    </select>
+
+    <button onclick="validateAndGoNext()">التالي</button>
+  </div>
+
+  <!-- الصفحة الثانية (Page 2) -->
+  <div id="page2" class="container" style="display: none;">
+    <!-- اختيار الفصل/الوحدة من قاعدة بيانات جاهزة -->
+    <label>اختر الموضوع (الفصل):</label>
+    <select id="subject" onchange="showSubtopics()">
+      <option value="">اختر الموضوع</option>
+      <option value="electromagnetic_induction">الفصل الاول الحث الكهرومغناطيسي</option>
+      <option value="electromagnetism">الفصل الثاني الكهرومغناطيسية</option>
+      <option value="quantum_theory">الفصل الثالث نظرية الكم</option>
+      <option value="atomic_physics">الفصل الرابع الذرة</option>
+      <option value="solid_state_electronics">الفصل الخامس الكترونيات الحالة الصلبة</option>
+      <option value="nuclear_physics">الفصل السادس الفيزياء النووية</option>
+    </select>
+
+    <label id="subtopicLabel" style="display:none;">اختر القسم الفرعي:</label>
+    <select id="subtopicSelect" style="display:none;" onchange="showQuestionsForSubtopic()">
+      <option value="">اختر القسم الفرعي</option>
+    </select>
+
+    <!-- القسم الجديد لعرض قائمة الأسئلة -->
+    <div id="questionList" style="
+      display:none; 
+      border:1px solid #ccc; 
+      padding:10px; 
+      min-height:120px; 
+      max-height:400px; 
+      overflow:auto; 
+      width:100%;
+    ">
+      <p style="font-size:14px; color:#999; text-align:center;">اختر سؤال لإضافته</p>
+    </div>
+
+    <hr style="margin: 20px 0;">
+
+    <!-- البحث في جميع الأسئلة (في كامل قاعدة البيانات) -->
+    <h4>البحث في جميع الأسئلة (في كامل قاعدة البيانات)</h4>
+    <input type="text" id="searchQuestionsInput" placeholder="اكتب كلمات البحث..." oninput="searchAllQuestions()">
+    <div id="searchResults" style="border:1px solid #ccc; padding:5px; min-height:120px; max-height:200px; overflow:auto;">
+      <p style="font-size:14px; color:#999; text-align:center;">اكتب كلمات البحث أعلاه</p>
+    </div>
+
+    <hr style="margin: 20px 0;">
+
+    <!-- إضافة سؤال مخصص -->
+    <h4>إضافة سؤال مخصص</h4>
+    <select id="customQuestionType" onchange="handleCustomTypeChange()">
+      <option value="">اختر نوع السؤال</option>
+      <option value="mcq">سؤال اختيار متعدد</option>
+      <option value="tf">سؤال صح وخطأ</option>
+      <option value="essay">سؤال مقالي/مسألة</option>
+    </select>
+
+    <div id="customFieldsContainer">
+      <!-- MCQ Fields -->
+      <div id="mcqFields" style="display:none; margin-top:10px;">
+        <textarea id="mcqQuestionInput" rows="2" placeholder="نص السؤال"></textarea>
+        <input type="text" id="mcqOption1" placeholder="الخيار الأول">
+        <input type="text" id="mcqOption2" placeholder="الخيار الثاني">
+        <input type="text" id="mcqOption3" placeholder="الخيار الثالث">
+        <input type="text" id="mcqOption4" placeholder="الخيار الرابع">
+      </div>
+
+      <!-- TF Fields -->
+      <div id="tfFields" style="display:none; margin-top:10px;">
+        <textarea id="tfQuestionInput" rows="2" placeholder="نص السؤال"></textarea>
+      </div>
+
+      <!-- Essay Fields -->
+      <div id="essayFields" style="display:none; margin-top:10px;">
+        <textarea id="essayQuestionInput" rows="4" placeholder="نص السؤال المقالي أو المسألة"></textarea>
+        <input type="file" id="essayImageInput" accept="image/*">
+      </div>
+    </div>
+
+    <button onclick="addCustomQuestion()" style="display:none;" id="addCustomBtn">أضف السؤال</button>
+
+    <hr style="margin: 20px 0;">
+
+    <!-- زر طباعة -->
+    <button onclick="printExam()">معاينة الشكل النهائي لورقة الاختبار - حفظ PDF - طباعة</button>
+
+    <!-- زر الرجوع للصفحة الأولى -->
+    <button onclick="goBackToPage1()">رجوع</button>
+  </div>
+
+  <!-- منطقة المعاينة النهائية للاختبار -->
+  <div id="examPreview">
+    <img id="examLogo" class="exam-logo" src="https://i.imgur.com/gcGPjyB.png" alt="شعار وزارة التعليم">
+    <div class="header">
+      <p class="test-time" id="testTime"></p>
+      <p>المملكة العربية السعودية</p>
+      <p>وزارة التعليم</p>
+      <p id="educationDepartmentHeader">إدارة التعليم بمنطقة</p>
+      <p id="schoolHeader">اسم المدرسة</p>
+      <p class="student-name" id="studentHeader">اسم الطالب: ____________________</p>
+      <p class="seat-number" id="seatNumber" style="position: absolute; top: 85px; left: 10px;">رقم الجلوس: ____________________</p>
+      <p class="teacher-name" id="teacherHeader">معلم المادة: </p>
+    </div>
+
+    <p style="font-size: 18px; font-weight: bold;" id="academicYearDisplay">
+      - فيزياء 1 أول ثانوي العام الدراسي الفصل الدراسي الأول
+    </p>
+    <p id="examDetails"></p>
+    <hr style="margin: 20px 0; border: 1px solid #000;">
+
+    <div class="grade-container" style="display:none;">
+      <div class="grade-label">الدرجة الكلية</div>
+      <div class="split-box">
+        <div class="upper"></div>
+        <div class="lower" id="totalExamScore">0</div>
+      </div>
+    </div>
+
+    <div id="questionsCount">
+      <p>عدد أسئلة الاختيار المتعدد: <span id="mcqCount">0</span></p>
+      <p>عدد أسئلة الصح والخطأ: <span id="tfCount">0</span></p>
+      <p>عدد الأسئلة المقالية: <span id="essayCount">0</span></p>
+      <p>العدد الكلي للأسئلة: <span id="totalQuestionsCount">0</span></p>
+    </div>
+
+    <div class="mcq-section" style="display:none;">
+      <h3></h3>
+      <ol id="mcqList" style="margin: 0; padding: 0 20px;"></ol>
+    </div>
+    <div class="tf-section" style="display:none;">
+      <h3></h3>
+      <ol id="tfList"></ol>
+    </div>
+    <div class="essay-section" style="display:none;">
+      <h3></h3>
+      <ol id="essayList"></ol>
+    </div>
+  </div>
+</body>
+</html>
